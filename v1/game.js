@@ -210,7 +210,9 @@
     flash: 0,
     revives: 0,        // 本局还剩几枚复活币（重开清零）
     reviveGiven: 0,    // 本局已经发放过几次（用来判断跨过新的 2000 分）
-    freeze: 0          // 命中定格剩余秒数
+    freeze: 0,         // 命中定格剩余秒数
+    combo: 0,          // 连续合成次数
+    comboTimer: 0      // 连击窗口剩余秒数
   };
 
   /* ---------------------------------------------------------
@@ -515,8 +517,21 @@
         nb.popAt = performance.now();
         state.balls.push(nb);
 
-        addScore(MERGE_SCORE[nt], mx, my, '+' + MERGE_SCORE[nt]);
-        burst(mx, my, nt, 8 + nt * 2, 140 + nt * 22);
+        /* 趣味机制：短时间内连续合成会触发连击，额外加分。 */
+        if (state.comboTimer > 0) state.combo++;
+        else state.combo = 1;
+        state.comboTimer = 2.4;
+        const baseScore = MERGE_SCORE[nt];
+        const comboBonus = state.combo >= 2 ? Math.min(12, state.combo - 1) : 0;
+        const earned = baseScore + comboBonus;
+        const scoreLabel = state.combo >= 2
+          ? '+' + earned + ' 连击×' + state.combo
+          : '+' + earned;
+        addScore(earned, mx, my, scoreLabel);
+        burst(mx, my, nt, 8 + nt * 2 + Math.min(state.combo, 8), 140 + nt * 22 + Math.min(state.combo, 8) * 12);
+        if (state.combo >= 3) {
+          state.floats.push({ x: mx, y: my - 28, text: state.combo >= 5 ? '超强连击！' : '连击！', life: 0.85, big: state.combo >= 5 });
+        }
         Sound.merge(nt);
         haptic(6 + nt);
         if (nt === MAX_TIER) state.flash = 1;
@@ -748,6 +763,8 @@
     state.revives = 0;        // 复活币只在本局有效，重开清零
     state.reviveGiven = 0;
     state.freeze = 0;
+    state.combo = 0;
+    state.comboTimer = 0;
     state.pending = pickSpawnTier();
     state.next = pickSpawnTier(state.pending);
     if (overlayEl) overlayEl.classList.remove('show');
@@ -1041,6 +1058,11 @@
     if (state.freeze > 0) { state.freeze = Math.max(0, state.freeze - dt); return; }
 
     if (state.over) return;          // 结束后冻结棋盘（粒子特效仍在 render 里继续）
+
+    if (state.comboTimer > 0) {
+      state.comboTimer = Math.max(0, state.comboTimer - dt);
+      if (state.comboTimer === 0) state.combo = 0;
+    }
 
     if (!state.ready) {
       state.cooldown -= dt;
