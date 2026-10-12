@@ -212,7 +212,9 @@
     reviveGiven: 0,    // 本局已经发放过几次（用来判断跨过新的 2000 分）
     freeze: 0,         // 命中定格剩余秒数
     combo: 0,          // 连续合成次数
-    comboTimer: 0      // 连击窗口剩余秒数
+    comboTimer: 0,     // 连击窗口剩余秒数
+    shake: 0,           // 爽快反馈：画面震动强度
+    megaFlash: 0        // 合成到「区」时的庆祝闪光
   };
 
   /* ---------------------------------------------------------
@@ -517,24 +519,38 @@
         nb.popAt = performance.now();
         state.balls.push(nb);
 
-        /* 趣味机制：短时间内连续合成会触发连击，额外加分。 */
+        /* 连续合成会累积连击奖励；冲到最高级「区」获得大奖励。 */
         if (state.comboTimer > 0) state.combo++;
         else state.combo = 1;
         state.comboTimer = 2.4;
         const baseScore = MERGE_SCORE[nt];
-        const comboBonus = state.combo >= 2 ? Math.min(12, state.combo - 1) : 0;
-        const earned = baseScore + comboBonus;
-        const scoreLabel = state.combo >= 2
-          ? '+' + earned + ' 连击×' + state.combo
-          : '+' + earned;
+        const comboBonus = state.combo >= 2 ? Math.min(24, (state.combo - 1) * 3) : 0;
+        const crownBonus = nt === MAX_TIER ? 30 : 0;
+        const earned = baseScore + comboBonus + crownBonus;
+        const scoreLabel = nt === MAX_TIER
+          ? '+' + earned + ' 绝杀！'
+          : state.combo >= 2
+            ? '+' + earned + ' 连击×' + state.combo
+            : '+' + earned;
         addScore(earned, mx, my, scoreLabel);
-        burst(mx, my, nt, 8 + nt * 2 + Math.min(state.combo, 8), 140 + nt * 22 + Math.min(state.combo, 8) * 12);
-        if (state.combo >= 3) {
-          state.floats.push({ x: mx, y: my - 28, text: state.combo >= 5 ? '超强连击！' : '连击！', life: 0.85, big: state.combo >= 5 });
+        const comboPower = Math.min(state.combo, 10);
+        burst(mx, my, nt, 14 + nt * 5 + comboPower * 2, 220 + nt * 45 + comboPower * 18);
+        state.shake = Math.max(state.shake, nt === MAX_TIER ? 11 : 2.5 + nt * 1.8 + comboPower * 0.6);
+        if (state.combo >= 2) {
+          state.floats.push({ x: mx, y: my - 30, text: state.combo >= 5 ? '爽！超强连击 ×' + state.combo : '连击 ×' + state.combo, life: 1.1, big: state.combo >= 4 });
         }
-        Sound.merge(nt);
-        haptic(6 + nt);
-        if (nt === MAX_TIER) state.flash = 1;
+        if (nt === MAX_TIER) {
+          state.flash = 1;
+          state.megaFlash = 1.15;
+          state.freeze = Math.max(state.freeze, 0.11);
+          state.floats.push({ x: W / 2, y: H * 0.36, text: '区！全场最佳！', life: 1.7, big: true });
+          burst(mx, my, nt, 54, 420);
+          Sound.bonus();
+          haptic(35);
+        } else {
+          Sound.merge(nt);
+          haptic(10 + nt * 5);
+        }
       }
     }
 
@@ -765,6 +781,8 @@
     state.freeze = 0;
     state.combo = 0;
     state.comboTimer = 0;
+    state.shake = 0;
+    state.megaFlash = 0;
     state.pending = pickSpawnTier();
     state.next = pickSpawnTier(state.pending);
     if (overlayEl) overlayEl.classList.remove('show');
@@ -1063,6 +1081,8 @@
       state.comboTimer = Math.max(0, state.comboTimer - dt);
       if (state.comboTimer === 0) state.combo = 0;
     }
+    state.shake = Math.max(0, state.shake - dt * 24);
+    state.megaFlash = Math.max(0, state.megaFlash - dt * 0.8);
 
     if (!state.ready) {
       state.cooldown -= dt;
@@ -1081,16 +1101,21 @@
     ctx.setTransform(view.scale, 0, 0, view.scale, 0, 0);
     ctx.clearRect(0, 0, W, H);
 
+    /* 轻微震屏只影响视觉，不影响触控坐标。 */
+    if (state.shake > 0.1) {
+      ctx.translate((Math.random() - 0.5) * state.shake, (Math.random() - 0.5) * state.shake);
+    }
     drawBoard();
     drawBalls();
     drawAim();
     /* 定格期间把特效的 dt 也压成 0，让它跟世界一起停住 */
     drawEffects(state.freeze > 0 ? 0 : dt);
+    ctx.setTransform(view.scale, 0, 0, view.scale, 0, 0);
 
-    if (state.flash > 0) {
+    if (state.flash > 0 || state.megaFlash > 0) {
       ctx.save();
-      ctx.globalAlpha = state.flash * 0.35;
-      ctx.fillStyle = '#fff';
+      ctx.globalAlpha = Math.max(state.flash * 0.35, state.megaFlash * 0.22);
+      ctx.fillStyle = state.megaFlash > 0 ? '#ffe9a8' : '#fff';
       ctx.fillRect(0, 0, W, H);
       ctx.restore();
     }
