@@ -27,11 +27,7 @@
   const REST_SPEED = 140;    // 线上方且速度低于它才算“卡住”（被弹飞路过的不算）
   const REST_SPEED2 = REST_SPEED * REST_SPEED;
 
-  const MAX_TIER  = 10;      // 最大那只（神奶蛙）的索引
-  const MAX_BONUS = 500;     // 两只神奶蛙相撞的奖励分
-                             // （原来是 100 —— 合出全游戏最难的东西只给 100 分，太寒酸；
-                             //  而且它同时清掉两块最大的水果、相当于救一条命，值这个价）
-  const MAX_MERGE_GIVES_REVIVE = true;  // 两只神奶蛙一起炸掉时，额外送一枚复活币
+  const MAX_TIER  = 3;       // 最高等级：区（索引 3）
   const FREEZE_MS = 130;     // 清场时的定格，让这一下有重量
   const REVIVE_STEP = 2000;  // 每累计多少分，发一枚复活币
   const MERGE_PAD = 0.8;     // 合成判定的接触容差（px）
@@ -44,43 +40,22 @@
   const SQUASH_DECAY     = 9;     // 挤压回弹速度
   const SQUASH_MAX       = 0.30;  // 最大挤压变形
 
-  /* 水果链：索引越大越大
-     file : assets/fruits/ 下的贴图（由 tools/normalize_assets.py 统一生成）
-     c1/c2: 贴图缺失时的程序化水果配色
-     pc1/pc2: 粒子/汁水的颜色（取自贴图主体平均色） */
-  const ASSET_FILL = 0.92;   // 贴图里主体占画布长边的比例，与生成脚本保持一致
+  /* 四个合成等级：画面只显示「苏、湘、琳、区」四个字，不使用原水果贴图。 */
+  const ASSET_FILL = 0.92;
 
   const FRUITS = [
-    { name: '葡萄',   r: 17,  c1: '#c084f5', c2: '#7a3fb0', line: 'rgba(74,26,120,.35)',
-      file: 'assets/fruits/01-grape.webp',     pc1: '#e9c466', pc2: '#b8903a' },
-    { name: '樱桃',   r: 23,  c1: '#ff8a99', c2: '#c62346', line: 'rgba(120,10,40,.35)',
-      file: 'assets/fruits/02-cherry.webp',    pc1: '#ffe684', pc2: '#d8b44f' },
-    { name: '橘子',   r: 31,  c1: '#ffc06a', c2: '#e0741a', line: 'rgba(140,62,0,.32)',
-      file: 'assets/fruits/03-orange.webp',    pc1: '#fdd865', pc2: '#cfa63f' },
-    { name: '柠檬',   r: 39,  c1: '#fff285', c2: '#e0b000', line: 'rgba(140,110,0,.32)',
-      file: 'assets/fruits/04-lemon.webp',     pc1: '#f6cd63', pc2: '#c9a040' },
-    { name: '猕猴桃', r: 48,  c1: '#b9e05a', c2: '#5d8c1c', line: 'rgba(60,90,10,.32)',
-      file: 'assets/fruits/05-kiwi.webp',      pc1: '#c4a559', pc2: '#94793c' },
-    { name: '番茄',   r: 58,  c1: '#ff8a66', c2: '#c62f28', line: 'rgba(120,20,10,.32)',
-      file: 'assets/fruits/06-tomato.webp',    pc1: '#fbd75a', pc2: '#cba63c' },
-    { name: '桃子',   r: 69,  c1: '#ffd0d0', c2: '#ea7f93', line: 'rgba(160,60,80,.3)',
-      file: 'assets/fruits/07-peach.webp',     pc1: '#f7c45a', pc2: '#c99a3e' },
-    { name: '菠萝',   r: 81,  c1: '#ffe07a', c2: '#c88a12', line: 'rgba(130,80,0,.32)',
-      file: 'assets/fruits/08-pineapple.webp', pc1: '#ffd37b', pc2: '#d1a252' },
-    { name: '椰子',   r: 94,  c1: '#f0e2c6', c2: '#9b7b4f', line: 'rgba(90,64,32,.35)',
-      file: 'assets/fruits/09-coconut.webp',   pc1: '#ffd771', pc2: '#d3a94e' },
-    { name: '半奶蛙', r: 108, c1: '#ff9d78', c2: '#c23a2c', line: 'rgba(120,24,16,.32)',
-      file: 'assets/fruits/10-halfmelon.webp', pc1: '#ccab68', pc2: '#9c8047' },
-    { name: '神奶蛙', r: 124, c1: '#7ce878', c2: '#1c8a33', line: 'rgba(12,70,24,.4)',
-      file: 'assets/fruits/11-watermelon.webp', pc1: '#eece9b', pc2: '#c0a271' }
+    { name: '苏', r: 24, c1: '#b8e6a0', c2: '#69b65b', line: '#477d3c', pc1: '#b8e6a0', pc2: '#69b65b' },
+    { name: '湘', r: 34, c1: '#a9d9ff', c2: '#4f94d8', line: '#356da8', pc1: '#a9d9ff', pc2: '#4f94d8' },
+    { name: '琳', r: 48, c1: '#ffd69a', c2: '#ed9b4b', line: '#b86b2b', pc1: '#ffd69a', pc2: '#ed9b4b' },
+    { name: '区', r: 66, c1: '#e2c3ff', c2: '#a778d8', line: '#7651a5', pc1: '#e2c3ff', pc2: '#a778d8' }
   ];
 
   /* 合成出 tier 的得分（三角数） */
-  const MERGE_SCORE = [0, 1, 3, 6, 10, 15, 21, 28, 36, 45, 55];
+  const MERGE_SCORE = [0, 1, 3, 6];
 
   /* 新水果的掉落权重（越小越常见） */
-  const SPAWN_TIERS = [0, 1, 2, 3, 4];
-  const SPAWN_WEIGHTS = [0.28, 0.24, 0.20, 0.16, 0.12];
+  const SPAWN_TIERS = [0, 1, 2];
+  const SPAWN_WEIGHTS = [0.55, 0.30, 0.15];
 
   const BEST_KEY = 'danaiwa.best.v1';
   const MUTE_KEY = 'danaiwa.mute.v1';
@@ -394,7 +369,7 @@
 
           if (minGap > MERGE_PAD || minGap === 1e9) continue;
 
-          if (a.tier === b.tier && it === 0) {
+          if (a.tier === b.tier && a.tier < MAX_TIER && it === 0) {
             a.dead = true;
             b.dead = true;
             merges.push([a, b]);
@@ -526,24 +501,9 @@
       const my = (a.y + b.y) * 0.5;
       const tier = a.tier;
 
-      if (tier >= MAX_TIER) {
-        /* 两只神奶蛙 → 一起炸掉，拿一大笔奖励分（外加一枚复活币）。
-           注意：它同时清掉了两块最大的水果，是后期唯一的泄压阀，不能取消。
-           分数的飘字不用 addScore 那个普通的，下面单独给了「大字 +500」。 */
-        addScore(MAX_BONUS);
-        burst(mx, my, MAX_TIER, 90, 560);
-        burst(mx, my, MAX_TIER - 2, 42, 340);
-        Sound.bonus();
-        haptic(70);
-        state.flash = 1.4;                    // 比普通合成更亮的全屏闪
-        state.freeze = FREEZE_MS / 1000;      // 定格一下，让这一下有重量
-        state.floats.push({ x: mx, y: my - 74, text: '两个神奶蛙 💥', life: 1.6 });
-        state.floats.push({ x: mx, y: my - 16, text: '+' + MAX_BONUS, life: 2.2, big: true });
-        if (MAX_MERGE_GIVES_REVIVE) {
-          state.revives++;
-          paintRevives(true);
-        }
-      } else {
+      /* 最高等级「区」不再合成；正常碰撞检测也会阻止它进入 merges。 */
+      if (tier >= MAX_TIER) continue;
+      {
         const nt = tier + 1;
         const nb = makeBall(mx, my, nt, (a.vx + b.vx) * 0.5, (a.vy + b.vy) * 0.5 - 60);
         /* 贴着墙合成时，新水果更大，先夹回场地内，避免瞬间穿墙 */
@@ -810,117 +770,33 @@
 
     c.save();
     c.translate(x, y);
-    /* 撞击挤压：沿法线压扁、垂直拉伸（世界坐标，先于水果自身旋转） */
+    /* 保留原有的撞击挤压动画，但文字保持正向，方便辨认。 */
     if (squashShape && squashShape.k > 0.004) {
       c.rotate(squashShape.a);
       c.scale(1 - squashShape.k, 1 + squashShape.k * 0.85);
       c.rotate(-squashShape.a);
     }
     if (s !== 1) c.scale(s, s);
-    c.rotate(angle || 0);
 
-    /* —— 贴图模式：主体直接画 PNG，画布边长按 ASSET_FILL 换算，保证视觉大小 = 物理直径 —— */
-    if (f.img) {
-      const box = (r * 2) / ASSET_FILL;
-      c.drawImage(f.img, -box / 2, -box / 2, box, box);
-      c.restore();
-      return;
-    }
-
-    /* —— 兜底一：贴图还没到位时，先画一张极模糊的同形状缩略图 ——
-       观感是「图正在慢慢变清晰」，而不是「图挂了」看到一堆卡通脸。
-       这张缩略图是内联的 data URL（assets/fruits/blur.js，约 8KB），不走网络。 */
-    if (blurImg && blurCfg && blurCfg.cols > 0) {
-      const idx = tier < blurCfg.cols ? tier : blurCfg.cols - 1;
-      const box = (r * 2) / ASSET_FILL;
-      const cell = blurCfg.cell;
-      c.imageSmoothingEnabled = true;
-      if ('imageSmoothingQuality' in c) c.imageSmoothingQuality = 'high';
-      c.drawImage(blurImg, idx * cell, 0, cell, cell, -box / 2, -box / 2, box, box);
-      c.restore();
-      return;
-    }
-
-    /* —— 兜底二：连缩略图都没有（blur.js 被拦了）才画程序化的圆形水果 —— */
-    /* 主体 */
-    const g = c.createRadialGradient(-r * 0.34, -r * 0.40, r * 0.12, 0, 0, r * 1.12);
+    /* 简洁圆形底图，只显示四个指定汉字之一，不显示水果、表情或装饰。 */
+    const g = c.createRadialGradient(-r * 0.28, -r * 0.34, r * 0.08, 0, 0, r * 1.12);
     g.addColorStop(0, f.c1);
     g.addColorStop(1, f.c2);
     c.beginPath();
     c.arc(0, 0, r, 0, Math.PI * 2);
     c.fillStyle = g;
     c.fill();
-
-    /* 半奶蛙 / 神奶蛙 的纹理 */
-    if (tier === MAX_TIER) {
-      c.save();
-      c.beginPath();
-      c.arc(0, 0, r, 0, Math.PI * 2);
-      c.clip();
-      c.strokeStyle = 'rgba(10,60,20,.30)';
-      c.lineWidth = r * 0.13;
-      for (let k = -2; k <= 2; k++) {
-        c.beginPath();
-        c.ellipse(k * r * 0.42, 0, r * 0.16, r * 1.05, 0, 0, Math.PI * 2);
-        c.stroke();
-      }
-      c.restore();
-    } else if (tier === MAX_TIER - 1) {
-      c.save();
-      c.beginPath();
-      c.arc(0, 0, r, 0, Math.PI * 2);
-      c.clip();
-      c.strokeStyle = 'rgba(20,110,45,.85)';
-      c.lineWidth = r * 0.16;
-      c.beginPath();
-      c.arc(0, 0, r * 0.93, 0, Math.PI * 2);
-      c.stroke();
-      c.restore();
-    }
-
-    /* 描边 */
-    c.lineWidth = Math.max(1.4, r * 0.055);
+    c.lineWidth = Math.max(1.5, r * 0.055);
     c.strokeStyle = f.line;
-    c.beginPath();
-    c.arc(0, 0, r - c.lineWidth * 0.5, 0, Math.PI * 2);
     c.stroke();
 
-    /* 高光 */
-    c.beginPath();
-    c.ellipse(-r * 0.34, -r * 0.40, r * 0.30, r * 0.19, -0.7, 0, Math.PI * 2);
-    c.fillStyle = 'rgba(255,255,255,.55)';
-    c.fill();
-
-    /* 表情 */
-    if (r >= 20) {
-      const eyeR = r * 0.135;
-      const eyeX = r * 0.33;
-      const eyeY = -r * 0.06;
-
-      c.fillStyle = 'rgba(46,32,24,.88)';
-      c.beginPath(); c.arc(-eyeX, eyeY, eyeR, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc( eyeX, eyeY, eyeR, 0, Math.PI * 2); c.fill();
-
-      c.fillStyle = 'rgba(255,255,255,.9)';
-      c.beginPath(); c.arc(-eyeX - eyeR * 0.3, eyeY - eyeR * 0.35, eyeR * 0.34, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc( eyeX - eyeR * 0.3, eyeY - eyeR * 0.35, eyeR * 0.34, 0, Math.PI * 2); c.fill();
-
-      c.beginPath();
-      c.arc(0, r * 0.08, r * 0.20, 0.18 * Math.PI, 0.82 * Math.PI);
-      c.lineWidth = Math.max(1.2, r * 0.055);
-      c.lineCap = 'round';
-      c.strokeStyle = 'rgba(46,32,24,.72)';
-      c.stroke();
-
-      c.fillStyle = 'rgba(255,120,120,.30)';
-      c.beginPath(); c.ellipse(-r * 0.56, r * 0.16, r * 0.16, r * 0.11, 0, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.ellipse( r * 0.56, r * 0.16, r * 0.16, r * 0.11, 0, 0, Math.PI * 2); c.fill();
-    } else {
-      c.fillStyle = 'rgba(46,32,24,.85)';
-      c.beginPath(); c.arc(-r * 0.3, -r * 0.06, r * 0.13, 0, Math.PI * 2); c.fill();
-      c.beginPath(); c.arc( r * 0.3, -r * 0.06, r * 0.13, 0, Math.PI * 2); c.fill();
-    }
-
+    c.fillStyle = '#ffffff';
+    c.textAlign = 'center';
+    c.textBaseline = 'middle';
+    c.font = '800 ' + Math.round(r * 0.92) + 'px "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif';
+    c.shadowColor = 'rgba(0,0,0,0.12)';
+    c.shadowBlur = Math.max(1, r * 0.04);
+    c.fillText(f.name, 0, 1);
     c.restore();
   }
 
@@ -1374,7 +1250,7 @@
     drawChain();
     reset();
     loadBlur();             // 占位图是内联的，几乎立刻可用
-    loadSprites();          // 贴图异步到位，到了会自动重画预览
+    // 四个等级使用内绘文字图标，无需加载外部贴图。
     requestAnimationFrame((t) => { last = t; requestAnimationFrame(frame); });
   }
 
@@ -1387,6 +1263,6 @@
   /* 调试句柄（控制台可用）：__DNW__.state / .reset() / .drop() / .FRUITS / .render() */
   window.__DNW__ = { state, reset, revive, settle, gameOver, tryDrop, stepPhysics, update, FRUITS,
                      render, resizeCanvas, shapeOf, makeBall, paintRevives, addScore,
-                     MAX_BONUS, REVIVE_STEP,
+                     REVIVE_STEP,
                      blurReady: () => !!blurImg };
 })();
