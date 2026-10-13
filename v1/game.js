@@ -27,7 +27,7 @@
   const REST_SPEED = 140;    // 线上方且速度低于它才算“卡住”（被弹飞路过的不算）
   const REST_SPEED2 = REST_SPEED * REST_SPEED;
 
-  const MAX_TIER  = 3;       // 最高等级：区（索引 3）
+  const MAX_TIER  = 3;       // 最高等级：4级心愿花灵（索引 3）
   const FREEZE_MS = 130;     // 清场时的定格，让这一下有重量
   const REVIVE_STEP = 2000;  // 每累计多少分，发一枚复活币
   const MERGE_PAD = 0.8;     // 合成判定的接触容差（px）
@@ -49,6 +49,14 @@
     { name: '琳', r: 48, c1: '#ffd69a', c2: '#ed9b4b', line: '#b86b2b', pc1: '#ffd69a', pc2: '#ed9b4b' },
     { name: '区', r: 66, c1: '#e2c3ff', c2: '#a778d8', line: '#7651a5', pc1: '#e2c3ff', pc2: '#a778d8' }
   ];
+
+  // 花叶小精灵素材：保留原图，仅作为 Canvas 角色贴图
+  const SPIRIT_IMAGES = [
+    'assets/spirits/lv1.png',
+    'assets/spirits/lv2.png',
+    'assets/spirits/lv3.png',
+    'assets/spirits/lv4.png'
+  ].map(src => { const i = new Image(); i.src = src; return i; });
 
   /* 合成出 tier 的得分（三角数） */
   const MERGE_SCORE = [0, 1, 3, 6];
@@ -800,12 +808,12 @@
    * ------------------------------------------------------- */
 
   function drawFruit(c, x, y, r, tier, angle, scale, squashShape) {
-    const f = FRUITS[tier];
     const s = scale === undefined ? 1 : scale;
+    const img = SPIRIT_IMAGES[tier];
 
     c.save();
     c.translate(x, y);
-    /* 保留原有的撞击挤压动画，但文字保持正向，方便辨认。 */
+
     if (squashShape && squashShape.k > 0.004) {
       c.rotate(squashShape.a);
       c.scale(1 - squashShape.k, 1 + squashShape.k * 0.85);
@@ -813,25 +821,18 @@
     }
     if (s !== 1) c.scale(s, s);
 
-    /* 简洁圆形底图，只显示四个指定汉字之一，不显示水果、表情或装饰。 */
-    const g = c.createRadialGradient(-r * 0.28, -r * 0.34, r * 0.08, 0, 0, r * 1.12);
-    g.addColorStop(0, f.c1);
-    g.addColorStop(1, f.c2);
-    c.beginPath();
-    c.arc(0, 0, r, 0, Math.PI * 2);
-    c.fillStyle = g;
-    c.fill();
-    c.lineWidth = Math.max(1.5, r * 0.055);
-    c.strokeStyle = f.line;
-    c.stroke();
+    if (img && img.complete && img.naturalWidth) {
+      // 原图保持比例，不重绘、不改色
+      const size = r * 2.25;
+      c.drawImage(img, -size / 2, -size / 2, size, size);
+    } else {
+      const f = FRUITS[tier];
+      c.fillStyle = f.c2;
+      c.beginPath();
+      c.arc(0,0,r,0,Math.PI*2);
+      c.fill();
+    }
 
-    c.fillStyle = '#ffffff';
-    c.textAlign = 'center';
-    c.textBaseline = 'middle';
-    c.font = '800 ' + Math.round(r * 0.92) + 'px "PingFang SC", "Microsoft YaHei", "Noto Sans CJK SC", sans-serif';
-    c.shadowColor = 'rgba(0,0,0,0.12)';
-    c.shadowBlur = Math.max(1, r * 0.04);
-    c.fillText(f.name, 0, 1);
     c.restore();
   }
 
